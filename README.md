@@ -1,6 +1,6 @@
-# Job Description Skill Fit Analysis PoC
+# Job Description Skill Fit Analysis 
 
-A simple Proof of Concept (PoC) application that analyzes a candidate's profile against a job description to calculate a percentage fit score. The analysis is based on a weighted comparison of skills, years of experience, and expected salary (CTC).
+A simple application that analyzes a candidate's profile against a job description to calculate a percentage fit score. The analysis is based on a weighted comparison of skills, years of experience, and expected salary (CTC).
 
 > This tool provides a quantitative measure to help recruiters and hiring managers quickly screen and prioritize candidates.
 
