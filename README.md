@@ -4,7 +4,7 @@ A simple Proof of Concept (PoC) application that analyzes a candidate's profile 
 
 > This tool provides a quantitative measure to help recruiters and hiring managers quickly screen and prioritize candidates.
 
-![image](https://user-images.githubusercontent.com/11333333/193247053-12547148-529a-4f51-8b01-9f9361622321.png)
+![image](https://github.com/US30/Job-Fit-Anaysis/blob/main/appui.png)
 *(Note: Replace the above image link with a screenshot of your actual application once it's running.)*
 
 ---
