@@ -1,59 +1,85 @@
-def calculate_skill_fit(jd_skills, candidate_skills):
-    """Calculates the skill fit percentage."""
-    # Ensure skills are compared in a case-insensitive and whitespace-trimmed manner
-    jd_skills_set = {skill.lower().strip() for skill in jd_skills}
-    candidate_skills_set = {skill.lower().strip() for skill in candidate_skills}
+def analyze_skills(jd_text_skills, resume_skills, mandatory_skills_list):
+    """
+    Analyzes skills based on mandatory and non-mandatory categories.
+    Implements the 'Not Fit' rule for mandatory skills.
+    """
+    # Normalize all skill lists to sets for efficient operations
+    resume_skills_set = {skill.lower() for skill in resume_skills}
+    jd_skills_set = {skill.lower() for skill in jd_text_skills}
+    mandatory_skills_set = {skill.lower() for skill in mandatory_skills_list}
 
-    if not jd_skills_set:
-        return 100.0  # If JD requires no skills, it's a perfect fit.
-
-    matching_skills = jd_skills_set.intersection(candidate_skills_set)
-    fit_percentage = (len(matching_skills) / len(jd_skills_set)) * 100
+    # 1. Check for mandatory skills
+    missing_mandatory = mandatory_skills_set - resume_skills_set
     
-    return round(fit_percentage, 2), len(matching_skills), len(jd_skills_set)
+    if missing_mandatory:
+        return {
+            "fit_status": "Not Fit",
+            "reason": f"Missing {len(missing_mandatory)} mandatory skill(s).",
+            "matched_mandatory": list(mandatory_skills_set.intersection(resume_skills_set)),
+            "missing_mandatory": list(missing_mandatory),
+            "matched_non_mandatory": [],
+            "missing_non_mandatory": []
+        }
 
-def calculate_experience_fit(jd_experience, candidate_experience):
-    """Calculates the experience fit percentage."""
-    if jd_experience == 0:
-        return 100.0 # If no experience is required, it's a perfect fit.
-    
-    if candidate_experience >= jd_experience:
-        return 100.0
-    
-    fit_percentage = (candidate_experience / jd_experience) * 100
-    return round(fit_percentage, 2)
+    # 2. If all mandatory skills are present, proceed with scoring
+    non_mandatory_skills_set = jd_skills_set - mandatory_skills_set
+    matched_non_mandatory = non_mandatory_skills_set.intersection(resume_skills_set)
+    missing_non_mandatory = non_mandatory_skills_set - resume_skills_set
 
-def calculate_ctc_fit(jd_ctc, candidate_ctc):
-    """Calculates the CTC fit percentage."""
-    if candidate_ctc <= jd_ctc:
-        return 100.0
-    
-    # If expected CTC is higher, scale down the fit percentage
-    fit_percentage = (jd_ctc / candidate_ctc) * 100
-    return round(fit_percentage, 2)
+    # Calculate skill fit score ONLY based on non-mandatory skills
+    if not non_mandatory_skills_set:
+        skill_fit_percent = 100.0 # No non-mandatory skills to match
+    else:
+        skill_fit_percent = (len(matched_non_mandatory) / len(non_mandatory_skills_set)) * 100
 
-def get_final_fit(jd, candidate):
-    """Calculates the final weighted fit score."""
+    return {
+        "fit_status": "Fit",
+        "skill_fit_percent": round(skill_fit_percent, 2),
+        "matched_mandatory": list(mandatory_skills_set),
+        "missing_mandatory": [],
+        "matched_non_mandatory": list(matched_non_mandatory),
+        "missing_non_mandatory": list(missing_non_mandatory)
+    }
+
+def get_final_fit(skill_analysis_result, jd, candidate):
+    """
+    Calculates the final weighted fit score if the candidate is a 'Fit'.
+    """
+    # If the mandatory skill check failed, the candidate is not a fit.
+    if skill_analysis_result['fit_status'] == "Not Fit":
+        return 0, skill_analysis_result['reason'], skill_analysis_result
+
     # Weights
     SKILL_WEIGHT = 0.50
     EXPERIENCE_WEIGHT = 0.30
     CTC_WEIGHT = 0.20
+    
+    # Get skill fit from the detailed analysis
+    skill_fit_percent = skill_analysis_result['skill_fit_percent']
 
-    # Calculate individual fits
-    skill_fit_percent, matched_skills_count, required_skills_count = calculate_skill_fit(jd['required_skills'], candidate['skills'])
-    experience_fit_percent = calculate_experience_fit(jd['min_experience'], candidate['total_experience'])
-    ctc_fit_percent = calculate_ctc_fit(jd['max_ctc'], candidate['expected_ctc'])
+    # Calculate experience fit (reusing old functions for simplicity)
+    if jd['min_experience'] == 0:
+        experience_fit_percent = 100.0
+    elif candidate['total_experience'] >= jd['min_experience']:
+        experience_fit_percent = 100.0
+    else:
+        experience_fit_percent = (candidate['total_experience'] / jd['min_experience']) * 100
+
+    # Calculate CTC fit
+    if candidate['expected_ctc'] <= jd['max_ctc']:
+        ctc_fit_percent = 100.0
+    else:
+        ctc_fit_percent = (jd['max_ctc'] / candidate['expected_ctc']) * 100
 
     # Calculate final weighted score
     final_score = (skill_fit_percent * SKILL_WEIGHT) + \
                   (experience_fit_percent * EXPERIENCE_WEIGHT) + \
                   (ctc_fit_percent * CTC_WEIGHT)
 
-    # Create a short explanation
     explanation = (
-        f"Matched {matched_skills_count}/{required_skills_count} skills ({skill_fit_percent}% fit). "
-        f"Experience is an {experience_fit_percent}% fit. "
-        f"CTC is a {ctc_fit_percent}% fit."
+        f"Skill Fit: {skill_fit_percent}%, "
+        f"Experience Fit: {round(experience_fit_percent, 2)}%, "
+        f"CTC Fit: {round(ctc_fit_percent, 2)}%"
     )
     
-    return round(final_score, 2), explanation
+    return round(final_score, 2), explanation, skill_analysis_result
